@@ -9,10 +9,10 @@ class TestSequenceFunctions(unittest.TestCase):
         self.unihan.load()
         self.unihan.set_pinyin_type(pinyin=1)
     def test_pinyin(self):
-        hanzi = u"漢"
+        hanzi = u"\u6F22"  (han)
         pinyin = self.unihan.convert(hanzi)
         print hanzi + " : " + pinyin
-        self.assertEqual(pinyin, u"漢	(han4-tan1)")
+        self.assertEqual(pinyin, u"\u6F22	(han4-tan1)")
 
         
 if __name__ == '__main__':
