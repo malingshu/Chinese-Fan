@@ -81,7 +81,9 @@ class UnihanDict:
             
 
     def convert(self, name):
-        prons = [self.unihan_dict.get(ord(n),u'?') for n in name] # apply the "get" function of the associative array to each name in our array.  Convert the chinese character to it's unicode form (integer)
+        # because json.dumps saves the int in the key of the hash as a str
+        # we are stuck with str
+        prons = [self.unihan_dict.get(str(ord(n)),u'?') for n in name] # apply the "get" function of the associative array to each name in our array.  Convert the chinese character to it's unicode form (integer)
         prons_arr = []
         # for each kind of pinyin output we wish to use.
         # concatenate them with "tab"s 
