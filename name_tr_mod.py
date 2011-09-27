@@ -2,6 +2,7 @@
 import re
 import sys
 import pickle
+import json
 
 # define some variables here for the 5 types of pinyin we can use for transliteration
 # These are the order they exist in the pinyin transliteration table. ()
@@ -29,25 +30,55 @@ class UnihanDict:
         # unihan_dict contains the values of the mandarin pronunciation for all chinese characters
         unihan_dict = None
         unihan_pickle_f = None
+        unihan_json_f = None
         # if it the program has been run before on this system, then we can try to open the pickle of the database
         # this can save several seconds since the unihan file is very large
         try:
-            unihan_pickle_f = open(self.unihan_cache_loc)
-
+            unihan_pickle_f = open(self.unihan_cache_location)
         except:
             # if there is an error, do nothing and leave unihan_pickle_f as None
             pass
+        try: 
+            unihan_json_f = open(self.unihan_cache_location + '.json')
+        except:
+            print 'cannot open unihan json file: ' + self.unihan_cache_location + '.json'
+            pass
+
+        if unihan_json_f is not None:
+            print 'json...'
+            unihan_json = unihan_json_f.read()
+            unihan_dict = json.loads(unihan_json)
+            #print unihan_json
+            #print unihan_dict
 
         # if we can't find the pickle then we need to generate the info from unihan
-        if(unihan_pickle_f is not None):
-                unihan_dict = pickle.load(unihan_pickle_f)
-                unihan_pickle_f.close()
+#        if(unihan_pickle_f is not None):
+#                print "opening unihan pickle file"
+#                unihan_dict = pickle.load(unihan_pickle_f)
+#                unihan_pickle_f.close()
                 
         if unihan_dict is None:
+                print "opening unihan flat file"
                 unihan_dict = self.parse_unihan_db(self.unihan_location)
                 unihan_pickle_f = open(self.unihan_cache_location, "wb")
                 pickle.dump(unihan_dict,unihan_pickle_f)
         self.unihan_dict = unihan_dict
+
+        if unihan_json_f is None:
+            unihan_json = self.serialize(mode = 'json')
+            unihan_pickle_f = open(self.unihan_cache_location + '.json', "wb")
+            unihan_pickle_f.write(unihan_json)
+            unihan_pickle_f.close()
+            
+
+    def serialize(self, mode='json'):
+        if mode is 'json':
+            unihan_ser = json.dumps(self.unihan_dict)
+        if mode is 'pickle':
+            unihan_ser = pickle.dumps(unihan_dict)
+
+        return unihan_ser
+            
 
     def convert(self, name):
         prons = [self.unihan_dict.get(ord(n),u'?') for n in name] # apply the "get" function of the associative array to each name in our array.  Convert the chinese character to it's unicode form (integer)
