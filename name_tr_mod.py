@@ -17,76 +17,16 @@ default_output_tr = [tr_zhuyin, tr_pinyin, tr_wg, tr_gwoyu]
 default_unihan_location = u"public/data_tables/unihan.txt"
 default_pinyin_location = u"public/data_tables/pinyin_tr_table.txt"
 default_unihan_cache_location = u"public/pickle/unihan_pickle.data"
+default_pinyin_table_json_location = u"public/pickle/pinyin_tr_table.json"
 
 class UnihanDict:
 
-    def load_json(self, url, method='file'):
-        json_data = None
-        if method is 'file':
-            with open(url) as f:
-                json_str = f.read()
-                json_data = json.loads(json_str)
-        return json_data
-    def write_json(self, json_data, url, method='file'):
-        if method is 'file':
-            with open(url, 'wb') as f:
-                f.write(json.dumps(json_data))
 
 
-    def __init__(self, unihan_location= default_unihan_location, pinyin_location=default_pinyin_location, unihan_cache_location = default_unihan_cache_location, output_tr = default_output_tr, isDesktop = True):
-        self.unihan_location = unihan_location
-        self.pinyin_location = pinyin_location
-        self.unihan_cache_location = unihan_cache_location
+
+    def __init__(self, output_tr = default_output_tr):
         self.output_tr = output_tr
-        self.pinyin_table_json_location = u"public/pickle/pinyin_tr_table.json"
-        self.isDesktop = isDesktop
 
-
-    # load unihan dictionary
-    # load pinyin dictionary
-    def load(self):
-        # pinyin_dict allows us to convert between the various versions of pinyin                      
-        # pinyin_dict needs to be global because it is used in function convert_pinyin as a global variable
-        # so we declare it here first
-        self.pinyin_dict = self.load_translit_table()
-        # unihan_dict contains the values of the mandarin pronunciation for all chinese characters
-        unihan_dict = None
-        unihan_pickle_f = None
-        unihan_json_f = None
-        # if it the program has been run before on this system, then we can try to open the pickle of the database
-        # this can save several seconds since the unihan file is very large
-        try:
-            unihan_pickle_f = open(self.unihan_cache_location)
-        except:
-            # if there is an error, do nothing and leave unihan_pickle_f as None
-            pass
-        try: 
-            unihan_json_f = open(self.unihan_cache_location + '.json')
-        except:
-            print 'cannot open unihan json file: ' + self.unihan_cache_location + '.json'
-            pass
-
-        if unihan_json_f is not None:
-            print 'loading unihan from json file...'
-            unihan_json = unihan_json_f.read()
-            unihan_dict = json.loads(unihan_json)
-            #print unihan_json
-            #print unihan_dict
-
-        # if we can't find the pickle then we need to generate the info from unihan
-                
-        if unihan_dict is None:
-                print "opening unihan flat file"
-                unihan_dict = self.parse_unihan_db(self.unihan_location)
-                unihan_pickle_f = open(self.unihan_cache_location, "wb")
-                pickle.dump(unihan_dict,unihan_pickle_f)
-        self.unihan_dict = unihan_dict
-
-        if unihan_json_f is None:
-            unihan_json = self.serialize(mode = 'json')
-            unihan_pickle_f = open(self.unihan_cache_location + '.json', "wb")
-            unihan_pickle_f.write(unihan_json)
-            unihan_pickle_f.close()
             
 
 
@@ -97,15 +37,7 @@ class UnihanDict:
         return 'u' + hex(chr_int)[2:].lower()
 
     def convert(self, name):
-        # because json.dumps saves the int in the key of the hash as a str
-        # we are stuck with str
-        #prons = [self.unihan_dict.get(str(ord(n)),u'?') for n in name] # apply the "get" function of the associative array to each name in our array.  Convert the chinese character to it's unicode form (integer)
         prons = [self.unihan_dict.get(self.make_key(ord(n)),u'?') for n in name] # apply the "get" function of the associative array to each name in our array.  Convert the chinese character to it's unicode form (integer)
-        #prons = [self.unihan_dict.get(n, u'?') for n in name] # apply the "get" function of the associative array to each name in our array.  Convert the chinese character to it's unicode form (integer)
-
-
-        
-
         prons_arr = []
         # for each kind of pinyin output we wish to use.
         # concatenate them with "tab"s 
@@ -125,34 +57,6 @@ class UnihanDict:
         tr_opts = map(lambda i, j: i if j else None, tr_defs, tr_opts_request)
         tr_opts = filter(lambda i: True if i is not None else False, tr_opts)
         self.output_tr = tr_opts
-                
-        
-     
-    def load_translit_table(self):
-            json_pinyin_f = None
-            py_dict = None
-            try:
-                print "opening pinyin table to read json..."
-                py_dict = self.load_json(self.pinyin_table_json_location)
-            except IOError:
-                if self.isDesktop:
-                    print "could not find pinyin table to read json...loading from flat file"
-                    table_f = open(self.pinyin_location,"r")
-                    py_dict = {}
-                    for line in table_f:
-                            line = line.decode('utf-8') # we need to make sure each line is unicode before we start
-                            line_elms = line.split(u"\t")
-                            if line_elms:
-                                    for i in xrange(0,len(line_elms)):
-                                            line_elms[i] = line_elms[i].strip() # take off the white space if there is any
-                        
-                                    py_dict[line_elms[0].lower().strip()] = line_elms
-                    table_f.close()
-
-                    self.write_json(py_dict, self.pinyin_table_json_location)
-            except:
-                print "Unexpected error:", sys.exc_info()[0]
-            return py_dict
 
 
 # convert a single phoneme from Hanyu Pinyin to another format
@@ -188,6 +92,136 @@ class UnihanDict:
                     else:
                             pinyin_arr.append( self.pinyin_dict.get(pinyin.lower(),("?","?","?","?","?","?","?","?","?"))[enc+int(number)-1])
         return u''.join(pinyin_arr)  
+
+
+# input: array of pinyin strings separated by a single space
+# output: a string of another pinyin style.
+#         If there is more than one phoneme in an array, it means that there is more than one
+#         proununciation.  So in that case, we put them in parenthesis and add a dash to separate them.
+#         Finally, the phonemes are concatonated together and returned.
+# For the options for enc, see function convert_pinyin
+    def format_pron_of_name(self, pron_of_chars_arr, enc):
+        #each element is of the format u'pron1 pron2 pron3 etc'
+        #pron_double_arr = [] # <-- unused
+        output_arr = []
+        
+        # for each string in the array
+        # split the string on space " " to get individual pinyin phonemes
+        # then convert each phoneme to another format using convert_pinyin
+        for p in pron_of_chars_arr:
+                p_arr = []
+                if len(p)>0:
+                        p_arr = p.split(u' ')
+                        p_arr = [self.convert_pinyin(phone, enc) for phone in p_arr] # apply convert_pinyin to all elements in the array
+                        #pron_double_arr.append(p_arr) #<-- unused
+
+                        # if the array is longer than one, there is more than one possible pronunciation.  Put them in parenthises and concatenate with a dash.
+                        if len(p_arr) > 1:
+                              output_arr.append(   u'(' + u'-'.join(p_arr) + u')'   )
+                        else:
+                              output_arr.append(p_arr[0])
+        return u' '.join(output_arr)
+
+
+    
+    def load(self):
+        self.load_from_file()
+
+    def load_json(self, url, method='file'):
+        json_data = None
+        if method is 'file':
+            with open(url) as f:
+                json_str = f.read()
+                json_data = json.loads(json_str)
+        return json_data
+    
+    def write_json(self, json_data, url, method='file'):
+        if method is 'file':
+            with open(url, 'wb') as f:
+                f.write(json.dumps(json_data))
+        
+
+    def load_from_file(self, unihan_location = default_unihan_location, pinyin_location=default_pinyin_location, unihan_cache_location = default_unihan_cache_location, pinyin_table_json_location = default_pinyin_table_json_location):
+        # set file locations
+        self.unihan_location = unihan_location
+        self.pinyin_location = pinyin_location
+        self.unihan_cache_location = unihan_cache_location
+        self.pinyin_table_json_location = pinyin_table_json_location
+        self.pinyin_dict = self.load_translit_table_from_file() # load pinyin dictionary
+        self.unihan_dict = self.load_unihan_from_file()         # load unihan dictionary    
+
+
+
+    
+    def load_unihan_from_file(self):
+        
+        # unihan_dict contains the values of the mandarin pronunciation for all chinese characters
+        unihan_dict = None
+        unihan_pickle_f = None
+        unihan_json_f = None
+        # if it the program has been run before on this system, then we can try to open the pickle of the database
+        # this can save several seconds since the unihan file is very large
+        try:
+            unihan_pickle_f = open(self.unihan_cache_location)
+        except:
+            # if there is an error, do nothing and leave unihan_pickle_f as None
+            pass
+        try: 
+            unihan_json_f = open(self.unihan_cache_location + '.json')
+        except:
+            print 'cannot open unihan json file: ' + self.unihan_cache_location + '.json'
+            pass
+
+        if unihan_json_f is not None:
+            print 'loading unihan from json file...'
+            unihan_json = unihan_json_f.read()
+            unihan_dict = json.loads(unihan_json)
+            #print unihan_json
+            #print unihan_dict
+
+        # if we can't find the pickle then we need to generate the info from unihan
+                
+        if unihan_dict is None:
+                print "opening unihan flat file"
+                unihan_dict = self.parse_unihan_db(self.unihan_location)
+                unihan_pickle_f = open(self.unihan_cache_location, "wb")
+                pickle.dump(unihan_dict,unihan_pickle_f)
+
+        if unihan_json_f is None:
+            unihan_json = self.serialize(mode = 'json')
+            unihan_pickle_f = open(self.unihan_cache_location + '.json', "wb")
+            unihan_pickle_f.write(unihan_json)
+            unihan_pickle_f.close()
+            
+        return unihan_dict
+                
+        
+     
+    def load_translit_table_from_file(self):
+            json_pinyin_f = None
+            py_dict = None
+            try:
+                print "opening pinyin table to read json..."
+                py_dict = self.load_json(self.pinyin_table_json_location)
+            except IOError:
+                if self.isDesktop:
+                    print "could not find pinyin table to read json...loading from flat file"
+                    table_f = open(self.pinyin_location,"r")
+                    py_dict = {}
+                    for line in table_f:
+                            line = line.decode('utf-8') # we need to make sure each line is unicode before we start
+                            line_elms = line.split(u"\t")
+                            if line_elms:
+                                    for i in xrange(0,len(line_elms)):
+                                            line_elms[i] = line_elms[i].strip() # take off the white space if there is any
+                        
+                                    py_dict[line_elms[0].lower().strip()] = line_elms
+                    table_f.close()
+
+                    self.write_json(py_dict, self.pinyin_table_json_location)
+            except:
+                print "Unexpected error:", sys.exc_info()[0]
+            return py_dict
 
 
 
@@ -250,31 +284,5 @@ class UnihanDict:
         return name_arr
 
 
-# input: array of pinyin strings separated by a single space
-# output: a string of another pinyin style.
-#         If there is more than one phoneme in an array, it means that there is more than one
-#         proununciation.  So in that case, we put them in parenthesis and add a dash to separate them.
-#         Finally, the phonemes are concatonated together and returned.
-# For the options for enc, see function convert_pinyin
-    def format_pron_of_name(self, pron_of_chars_arr, enc):
-        #each element is of the format u'pron1 pron2 pron3 etc'
-        #pron_double_arr = [] # <-- unused
-        output_arr = []
-        
-        # for each string in the array
-        # split the string on space " " to get individual pinyin phonemes
-        # then convert each phoneme to another format using convert_pinyin
-        for p in pron_of_chars_arr:
-                p_arr = []
-                if len(p)>0:
-                        p_arr = p.split(u' ')
-                        p_arr = [self.convert_pinyin(phone, enc) for phone in p_arr] # apply convert_pinyin to all elements in the array
-                        #pron_double_arr.append(p_arr) #<-- unused
 
-                        # if the array is longer than one, there is more than one possible pronunciation.  Put them in parenthises and concatenate with a dash.
-                        if len(p_arr) > 1:
-                              output_arr.append(   u'(' + u'-'.join(p_arr) + u')'   )
-                        else:
-                              output_arr.append(p_arr[0])
-        return u' '.join(output_arr)
         
