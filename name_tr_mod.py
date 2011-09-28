@@ -82,7 +82,7 @@ class UnihanDict:
     # input: int val of the unicode chr
     # output: key of chr to use with unicode_dict
     def make_key(self, chr_int):
-        return 'u' + hex(chr_int))[2:].lower()
+        return 'u' + hex(chr_int)[2:].lower()
 
     def convert(self, name):
         # because json.dumps saves the int in the key of the hash as a str
