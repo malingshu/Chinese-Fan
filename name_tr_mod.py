@@ -14,9 +14,13 @@ tr_gwoyu = 6   # Gwoyeu Romatzyh (old R.O.C. standard)
 
 # indicate here what forms of translieration we would like the program to output
 default_output_tr = [tr_zhuyin, tr_pinyin, tr_wg, tr_gwoyu]
+default_unihan_location = u"public/data_tables/unihan.txt"
+default_pinyin_location = u"public/data_tables/pinyin_tr_table.txt"
+default_unihan_cache_location = u"public/pickle/unihan_pickle.data"
 
 class UnihanDict:
-    def __init__(self, unihan_location= u"data_tables/unihan.txt", pinyin_location=u"data_tables/pinyin_tr_table.txt", unihan_cache_location = u"pickle/unihan_pickle.data", output_tr = default_output_tr):
+
+    def __init__(self, unihan_location= default_unihan_location, pinyin_location=default_pinyin_location, unihan_cache_location = default_unihan_cache_location, output_tr = default_output_tr):
         self.unihan_location = unihan_location
         self.pinyin_location = pinyin_location
         self.unihan_cache_location = unihan_cache_location
