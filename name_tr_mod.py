@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import re
 import sys
-import pickle
-import json
+#import pickle
+import simplejson as json
 
 # define some variables here for the 5 types of pinyin we can use for transliteration
 # These are the order they exist in the pinyin transliteration table. ()
@@ -20,17 +20,35 @@ default_unihan_cache_location = u"public/pickle/unihan_pickle.data"
 
 class UnihanDict:
 
-    def __init__(self, unihan_location= default_unihan_location, pinyin_location=default_pinyin_location, unihan_cache_location = default_unihan_cache_location, output_tr = default_output_tr):
+    def load_json(self, url, method='file'):
+        json_data = None
+        if method is 'file':
+            with open(url) as f:
+                json_str = f.read()
+                json_data = json.loads(json_str)
+        return json_data
+    def write_json(self, json_data, url, method='file'):
+        if method is 'file':
+            with open(url, 'wb') as f:
+                f.write(json.dumps(json_data))
+
+
+    def __init__(self, unihan_location= default_unihan_location, pinyin_location=default_pinyin_location, unihan_cache_location = default_unihan_cache_location, output_tr = default_output_tr, isDesktop = True):
         self.unihan_location = unihan_location
         self.pinyin_location = pinyin_location
         self.unihan_cache_location = unihan_cache_location
         self.output_tr = output_tr
+        self.pinyin_table_json_location = u"public/pickle/pinyin_tr_table.json"
+        self.isDesktop = isDesktop
 
+
+    # load unihan dictionary
+    # load pinyin dictionary
     def load(self):
         # pinyin_dict allows us to convert between the various versions of pinyin                      
         # pinyin_dict needs to be global because it is used in function convert_pinyin as a global variable
         # so we declare it here first
-        self.pinyin_dict = self.load_translit_table(self.pinyin_location)
+        self.pinyin_dict = self.load_translit_table()
         # unihan_dict contains the values of the mandarin pronunciation for all chinese characters
         unihan_dict = None
         unihan_pickle_f = None
@@ -49,17 +67,13 @@ class UnihanDict:
             pass
 
         if unihan_json_f is not None:
-            print 'json...'
+            print 'loading unihan from json file...'
             unihan_json = unihan_json_f.read()
             unihan_dict = json.loads(unihan_json)
             #print unihan_json
             #print unihan_dict
 
         # if we can't find the pickle then we need to generate the info from unihan
-#        if(unihan_pickle_f is not None):
-#                print "opening unihan pickle file"
-#                unihan_dict = pickle.load(unihan_pickle_f)
-#                unihan_pickle_f.close()
                 
         if unihan_dict is None:
                 print "opening unihan flat file"
@@ -75,13 +89,7 @@ class UnihanDict:
             unihan_pickle_f.close()
             
 
-    def serialize(self, mode='json'):
-        if mode is 'json':
-            unihan_ser = json.dumps(self.unihan_dict)
-        if mode is 'pickle':
-            unihan_ser = pickle.dumps(unihan_dict)
 
-        return unihan_ser
 
     # input: int val of the unicode chr
     # output: key of chr to use with unicode_dict
@@ -120,17 +128,30 @@ class UnihanDict:
                 
         
      
-    def load_translit_table(self, table_file_location):
-            table_f = open(table_file_location,"r")
-            py_dict = {}
-            for line in table_f:
-                    line = line.decode('utf-8') # we need to make sure each line is unicode before we start
-                    line_elms = line.split(u"\t")
-                    if line_elms:
-                            for i in xrange(0,len(line_elms)):
-                                    line_elms[i] = line_elms[i].strip() # take off the white space if there is any
-                
-                            py_dict[line_elms[0].lower().strip()] = line_elms
+    def load_translit_table(self):
+            json_pinyin_f = None
+            py_dict = None
+            try:
+                print "opening pinyin table to read json..."
+                py_dict = self.load_json(self.pinyin_table_json_location)
+            except IOError:
+                if self.isDesktop:
+                    print "could not find pinyin table to read json...loading from flat file"
+                    table_f = open(self.pinyin_location,"r")
+                    py_dict = {}
+                    for line in table_f:
+                            line = line.decode('utf-8') # we need to make sure each line is unicode before we start
+                            line_elms = line.split(u"\t")
+                            if line_elms:
+                                    for i in xrange(0,len(line_elms)):
+                                            line_elms[i] = line_elms[i].strip() # take off the white space if there is any
+                        
+                                    py_dict[line_elms[0].lower().strip()] = line_elms
+                    table_f.close()
+
+                    self.write_json(py_dict, self.pinyin_table_json_location)
+            except:
+                print "Unexpected error:", sys.exc_info()[0]
             return py_dict
 
 

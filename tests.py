@@ -11,10 +11,6 @@ class TestSequenceFunctions(unittest.TestCase):
         
     def test_unihan_dict(self):
         u = self.unihan.unihan_dict
-        ukeys = u.keys()
-        print type(ukeys[0])
-        print ukeys[0]
-        self.assertEqual(type(ukeys[0]), type('')) # keys should be of type str
         self.assertEqual(u['u6f22'], 'han4 tan1') # pinyin of \u6f22 is: han4 tan1
 
         
