@@ -78,12 +78,22 @@ class UnihanDict:
             unihan_ser = pickle.dumps(unihan_dict)
 
         return unihan_ser
-            
+
+    # input: int val of the unicode chr
+    # output: key of chr to use with unicode_dict
+    def make_key(self, chr_int):
+        return 'u' + hex(chr_int))[2:].lower()
 
     def convert(self, name):
         # because json.dumps saves the int in the key of the hash as a str
         # we are stuck with str
-        prons = [self.unihan_dict.get(str(ord(n)),u'?') for n in name] # apply the "get" function of the associative array to each name in our array.  Convert the chinese character to it's unicode form (integer)
+        #prons = [self.unihan_dict.get(str(ord(n)),u'?') for n in name] # apply the "get" function of the associative array to each name in our array.  Convert the chinese character to it's unicode form (integer)
+        prons = [self.unihan_dict.get(self.make_key(ord(n)),u'?') for n in name] # apply the "get" function of the associative array to each name in our array.  Convert the chinese character to it's unicode form (integer)
+        #prons = [self.unihan_dict.get(n, u'?') for n in name] # apply the "get" function of the associative array to each name in our array.  Convert the chinese character to it's unicode form (integer)
+
+
+        
+
         prons_arr = []
         # for each kind of pinyin output we wish to use.
         # concatenate them with "tab"s 
@@ -194,10 +204,13 @@ class UnihanDict:
 
                                     # convert hex string to a native int value
                                     uni_int = int(uni_hex_chars,16)
+                                    uni_key = self.make_key(uni_int)
+                                    
 
                                     # save in our associative array
                                     # key: unicode value as an int, value: pronunciation in Mandarin as lowercase roman chars
-                                    db_dict[uni_int] = line_arr[2].lower()
+                                    #db_dict[uni_int] = line_arr[2].lower()
+                                    db_dict[uni_key] = line_arr[2].lower()
         return db_dict
 
 # load the file with the names we want to translate into an array
