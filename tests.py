@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import unittest
-from name_tr_mod import UnihanDict
+from UnihanDictDesktop import UnihanDictDesktop as UnihanDict
 
 
 class TestSequenceFunctions(unittest.TestCase):

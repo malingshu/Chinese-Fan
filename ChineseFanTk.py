@@ -1,7 +1,7 @@
 # File: gui_ch_convert.py
 
 from Tkinter import *
-from name_tr_mod import UnihanDict
+from UnihanDictDesktop import UnihanDictDesktop as UnihanDict
 
 def convert():
     check_checkboxes()
